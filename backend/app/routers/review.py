@@ -1,18 +1,18 @@
-"""结果复核接口：维护复核记录，覆盖开始复核、确认通过、发起重测等动作。"""
+"""结果复核接口：维护复核记录，覆盖开始复核、确认通过、发起重测与批量处理等动作。"""
 from __future__ import annotations
 
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas import ActionResult, EntryPayload, PageResult
+from app.schemas import ActionResult, BatchResult, BatchReviewPayload, EntryPayload, PageResult
 from app.services.review import ReviewService
 
 router = APIRouter(prefix="/api/review", tags=["结果复核"])
 
 service = ReviewService()
 
-LIST_FIELDS = ["复核编号", "关联结果", "复核项目", "复核人", "复核意见", "复核时间", "差异说明", "复核状态"]
+LIST_FIELDS = ["复核编号", "关联结果", "复核项目", "复核人", "复核意见", "复核时间", "差异说明", "重测原因", "复核状态"]
 STATUSES = ["待复核", "复核中", "已通过", "需重测"]
 
 
@@ -28,6 +28,41 @@ def list_entries(
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
     items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/stats")
+def review_stats() -> dict[str, Any]:
+    """看板计数：待复核记录、本月通过数、需重测项数，批量处理后前端会重新拉取。"""
+    return {"cards": service.stats()}
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出结果复核清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "review", "total": total, "items": items}
+
+
+@router.post("/batch", response_model=BatchResult)
+def run_batch(payload: BatchReviewPayload) -> BatchResult:
+    """批量确认通过 / 批量发起重测：整批校验，任一记录不合格则整批拒绝并逐条说明。"""
+    processed, synced, failures = service.run_batch(
+        action=payload.action,
+        ids=payload.ids,
+        opinion=payload.opinion,
+        difference=payload.difference,
+        reasons=payload.reasons,
+    )
+    if failures:
+        return BatchResult(
+            ok=False,
+            message=f"批量{payload.action}已整批拒绝，未改动任何记录，请处理以下 {len(failures)} 条问题",
+            failures=failures,
+        )
+    message = f"已批量{payload.action} {processed} 条复核记录"
+    if synced:
+        message += f"，并同步更新 {synced} 条关联检测结果状态"
+    return BatchResult(ok=True, message=message, processed=processed)
 
 
 @router.get("/{entry_id}", response_model=dict)
@@ -56,10 +91,3 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
-
-
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出结果复核清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "review", "total": total, "items": items}

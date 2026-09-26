@@ -28,6 +28,34 @@ class EntryPayload(BaseModel):
     remark: str | None = None
 
 
+class BatchReviewPayload(BaseModel):
+    """批量复核提交的字段集合：勾选的记录、结论动作与统一填写的意见。"""
+
+    ids: list[int] = Field(default_factory=list)
+    action: str = ""
+    复核意见: str = ""
+    差异说明: str = ""
+    复核人: str = ""
+    重测原因: dict[str, str] = Field(default_factory=dict)
+
+
+class BatchFailure(BaseModel):
+    """批量处理被整批拒绝时，逐条说明哪条记录为什么不满足条件。"""
+
+    id: int | None = None
+    复核编号: str = ""
+    原因: str = ""
+
+
+class BatchResult(BaseModel):
+    """批量处理结果：要么整批成功，要么整批拒绝并列出全部问题。"""
+
+    ok: bool
+    message: str
+    processed: list[dict[str, Any]] = Field(default_factory=list)
+    failures: list[BatchFailure] = Field(default_factory=list)
+
+
 
 class SampleEntry(BaseModel):
     """样品明细结构。"""

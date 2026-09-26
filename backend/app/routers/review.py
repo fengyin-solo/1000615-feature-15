@@ -1,11 +1,11 @@
-"""结果复核接口：维护复核记录，覆盖开始复核、确认通过、发起重测等动作。"""
+"""结果复核接口：维护复核记录，覆盖开始复核、确认通过、发起重测与批量复核。"""
 from __future__ import annotations
 
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas import ActionResult, EntryPayload, PageResult
+from app.schemas import ActionResult, BatchFailure, BatchResult, BatchReviewPayload, EntryPayload, PageResult
 from app.services.review import ReviewService
 
 router = APIRouter(prefix="/api/review", tags=["结果复核"])
@@ -30,6 +30,36 @@ def list_entries(
     return PageResult(items=items, total=total, page=page, size=size)
 
 
+@router.get("/summary")
+def summary() -> dict[str, int]:
+    """待复核计数、本月通过数、需重测项数；批量处理后前端会重新拉取。"""
+    return service.summary()
+
+
+@router.post("/batch", response_model=BatchResult)
+def run_batch(payload: BatchReviewPayload) -> BatchResult:
+    """批量确认通过/发起重测：任一记录不满足条件即整批拒绝，并逐条说明是哪几条、什么原因。"""
+    processed, failures, message = service.run_batch(payload)
+    if not message:
+        message = (
+            f"批量{payload.action.strip()}已整批拒绝，共 {len(failures)} 处问题，请逐条核对后重试"
+            if failures else f"已批量处理 {len(processed)} 条复核记录"
+        )
+    return BatchResult(
+        ok=not failures,
+        message=message,
+        processed=processed,
+        failures=[BatchFailure(**failure) for failure in failures],
+    )
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出结果复核清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "review", "total": total, "items": items}
+
+
 @router.get("/{entry_id}", response_model=dict)
 def get_entry(entry_id: int) -> dict:
     """读取单条复核记录明细；不存在时给出可读的错误说明。"""
@@ -52,14 +82,7 @@ def create_entry(payload: EntryPayload) -> ActionResult:
 def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     """对单条复核记录执行开始复核、确认通过、发起重测；不允许的动作会被拦下并说明原因。"""
     action = str(payload.values.get("action") or "").strip()
-    entry, message = service.run_action(entry_id, action)
+    entry, message = service.run_action(entry_id, action, payload.values)
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
-
-
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出结果复核清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "review", "total": total, "items": items}

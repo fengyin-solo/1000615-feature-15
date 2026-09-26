@@ -31,5 +31,24 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
 .btn.ghost { background: transparent; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
-.page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.page-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+.notice-text { color: #067647; }
+.muted-text { color: var(--muted); font-size: 12px; }
+.filter-item select { font: inherit; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }
+.check-col { width: 36px; text-align: center; }
+.batch-bar { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+.batch-bar .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.failure-panel { background: #fef3f2; border: 1px solid #fecdca; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.failure-panel p { margin: 0 0 6px; font-size: 13px; }
+.failure-panel ul { margin: 0; padding-left: 20px; font-size: 13px; color: #7a271a; display: flex; flex-direction: column; gap: 4px; }
+.dialog-mask { position: fixed; inset: 0; background: rgba(16, 24, 40, 0.45); display: flex; align-items: center; justify-content: center; z-index: 20; }
+.dialog { width: 520px; max-width: calc(100vw - 32px); max-height: calc(100vh - 64px); overflow: auto; background: #fff; border-radius: 10px; padding: 18px 20px; }
+.dialog h3 { margin: 0 0 8px; font-size: 16px; }
+.dialog-ids { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+.dialog-tip { margin: 4px 0 8px; font-size: 13px; color: #b54708; }
+.dialog-field { display: block; margin-bottom: 12px; }
+.dialog-field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.dialog-field input, .dialog-field textarea { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; resize: vertical; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.dialog-actions .btn:disabled { opacity: 0.6; cursor: wait; }
